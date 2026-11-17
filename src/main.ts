@@ -2,6 +2,8 @@ import { World, SessionMode } from '@iwsdk/core';
 import { setupEnvironment } from './scene/environment';
 import { XRSessionManager } from './ui/xr-session-manager';
 import { PalaceSceneManager } from './objects/palace-scene-manager';
+import { HandInteractionManager } from './interaction/hand-interaction-manager';
+import { HandStatusHUD } from './ui/hand-status-hud';
 
 async function bootstrap() {
   const container = document.getElementById('scene-container');
@@ -39,6 +41,10 @@ async function bootstrap() {
   // Initialize Palace Scene Manager
   const palaceManager = new PalaceSceneManager(world);
 
+  // Initialize Hand Interaction Manager & HUD
+  const handManager = new HandInteractionManager(world, palaceManager);
+  new HandStatusHUD(world, handManager);
+
   // Seed initial representative knowledge objects (within 0.3m - 0.8m seated comfort zone)
   palaceManager.addNode({
     id: 'topic-dsa',
@@ -73,7 +79,7 @@ async function bootstrap() {
     env.spatialDust.rotation.y += delta * 0.02;
   });
 
-  console.log('MindPalace VR initialized successfully with initial knowledge objects');
+  console.log('MindPalace VR initialized successfully with hand interaction system');
 }
 
 bootstrap().catch((err) => {
