@@ -5,6 +5,7 @@ import { PalaceSceneManager } from './objects/palace-scene-manager';
 import { HandInteractionManager } from './interaction/hand-interaction-manager';
 import { HandStatusHUD } from './ui/hand-status-hud';
 import { SpatialPalette } from './ui/spatial-palette';
+import { ConnectionManager } from './interaction/connection-manager';
 
 async function bootstrap() {
   const container = document.getElementById('scene-container');
@@ -49,6 +50,9 @@ async function bootstrap() {
   // Initialize Spatial Object Creation Palette
   new SpatialPalette(world, palaceManager);
 
+  // Initialize Connection Manager
+  const connectionManager = new ConnectionManager(world, palaceManager);
+
   // Seed initial representative knowledge objects (within 0.3m - 0.8m seated comfort zone)
   palaceManager.addNode({
     id: 'topic-dsa',
@@ -78,12 +82,16 @@ async function bootstrap() {
     createdAt: Date.now(),
   });
 
+  // Connect initial knowledge objects with spatial luminous lines
+  connectionManager.createConnection('topic-dsa', 'idea-binary-search');
+  connectionManager.createConnection('idea-binary-search', 'note-complexity');
+
   // Subtle slow rotation of spatial dust
   world.onXRFrame((_frame, delta) => {
     env.spatialDust.rotation.y += delta * 0.02;
   });
 
-  console.log('MindPalace VR initialized successfully with spatial creation palette');
+  console.log('MindPalace VR initialized successfully with spatial connections');
 }
 
 bootstrap().catch((err) => {
