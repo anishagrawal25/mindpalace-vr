@@ -1,5 +1,6 @@
 import { World, SessionMode } from '@iwsdk/core';
 import { setupEnvironment } from './scene/environment';
+import { XRSessionManager } from './ui/xr-session-manager';
 
 async function bootstrap() {
   const container = document.getElementById('scene-container');
@@ -31,12 +32,15 @@ async function bootstrap() {
   // Setup deep navy base with purple & cyan ambient/accent lighting
   const env = setupEnvironment(world);
 
+  // Initialize XR session entry & unsupported device handling
+  new XRSessionManager(world);
+
   // Subtle slow rotation of spatial dust
   world.onXRFrame((_frame, delta) => {
     env.spatialDust.rotation.y += delta * 0.02;
   });
 
-  console.log('MindPalace VR environment initialized successfully');
+  console.log('MindPalace VR initialized successfully');
 }
 
 bootstrap().catch((err) => {
