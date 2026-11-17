@@ -9,6 +9,7 @@ import { ConnectionManager } from './interaction/connection-manager';
 import { PersistenceManager } from './storage/persistence-manager';
 import { PalaceControls } from './ui/palace-controls';
 import { SubjectZonesManager } from './scene/subject-zones';
+import { PalaceAgentUI } from './ui/palace-agent-ui';
 
 async function bootstrap() {
   const container = document.getElementById('scene-container');
@@ -58,6 +59,9 @@ async function bootstrap() {
 
   // Initialize Spatial Object Creation Palette
   new SpatialPalette(world, palaceManager);
+
+  // Initialize Palace Agent (Spawn, Suggest Connections, Flag Gaps, Quiz)
+  new PalaceAgentUI(world, palaceManager, connectionManager, zonesManager);
 
   // Initialize Palace Controls (Save, Return-to-Center, Reset)
   let palaceControls: PalaceControls;
@@ -152,7 +156,7 @@ async function bootstrap() {
     env.spatialDust.rotation.y += delta * 0.02;
   });
 
-  console.log('MindPalace VR initialized successfully with subject zones');
+  console.log('MindPalace VR initialized successfully with agent features');
 }
 
 bootstrap().catch((err) => {
