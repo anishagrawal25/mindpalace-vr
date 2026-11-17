@@ -8,6 +8,7 @@ import { SpatialPalette } from './ui/spatial-palette';
 import { ConnectionManager } from './interaction/connection-manager';
 import { PersistenceManager } from './storage/persistence-manager';
 import { PalaceControls } from './ui/palace-controls';
+import { SubjectZonesManager } from './scene/subject-zones';
 
 async function bootstrap() {
   const container = document.getElementById('scene-container');
@@ -45,6 +46,9 @@ async function bootstrap() {
   // Initialize Palace Scene Manager
   const palaceManager = new PalaceSceneManager(world);
 
+  // Initialize Subject Zones (DSA, AI/ML, Databases, Java/Systems)
+  const zonesManager = new SubjectZonesManager(world);
+
   // Initialize Hand Interaction Manager & HUD
   const handManager = new HandInteractionManager(world, palaceManager);
   new HandStatusHUD(world, handManager);
@@ -77,8 +81,19 @@ async function bootstrap() {
     persistence.savePalace(nodes, connections);
   };
 
-  // Wire auto-save on node movements
-  handManager.onNodeReleased = (_node) => {
+  // Wire auto-save & zone detection on node interactions
+  handManager.onNodeMoved = (node) => {
+    const zone = zonesManager.getZoneForPosition(node.position);
+    zonesManager.highlightZone(zone ? zone.id : null);
+  };
+
+  handManager.onNodeReleased = (node) => {
+    const zone = zonesManager.getZoneForPosition(node.position);
+    if (zone) {
+      node.nodeData.zoneId = zone.id;
+      palaceControls.showSaveConfirmation(`Placed in ${zone.name}`);
+    }
+    zonesManager.highlightZone(null);
     triggerSave();
   };
 
@@ -100,8 +115,9 @@ async function bootstrap() {
       id: 'topic-dsa',
       type: 'topic',
       title: 'Data Structures & Algorithms',
-      position: [0, 1.25, -0.55],
+      position: [-0.38, 1.25, -0.52],
       color: '#a855f7',
+      zoneId: 'DSA',
       createdAt: Date.now(),
     });
 
@@ -109,8 +125,9 @@ async function bootstrap() {
       id: 'idea-binary-search',
       type: 'idea',
       title: 'Binary Search O(log n)',
-      position: [-0.28, 1.15, -0.50],
+      position: [-0.28, 1.15, -0.48],
       color: '#06b6d4',
+      zoneId: 'DSA',
       createdAt: Date.now(),
     });
 
@@ -119,7 +136,7 @@ async function bootstrap() {
       type: 'note',
       title: 'Divide & Conquer',
       content: 'Halve the search space at each iteration. Sorted invariant required.',
-      position: [0.28, 1.18, -0.48],
+      position: [-0.15, 1.18, -0.44],
       zoneId: 'DSA',
       createdAt: Date.now(),
     });
@@ -135,7 +152,7 @@ async function bootstrap() {
     env.spatialDust.rotation.y += delta * 0.02;
   });
 
-  console.log('MindPalace VR initialized successfully with palace controls');
+  console.log('MindPalace VR initialized successfully with subject zones');
 }
 
 bootstrap().catch((err) => {
