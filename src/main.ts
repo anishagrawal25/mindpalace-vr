@@ -4,6 +4,7 @@ import { XRSessionManager } from './ui/xr-session-manager';
 import { PalaceSceneManager } from './objects/palace-scene-manager';
 import { HandInteractionManager } from './interaction/hand-interaction-manager';
 import { HandStatusHUD } from './ui/hand-status-hud';
+import { SpatialPalette } from './ui/spatial-palette';
 
 async function bootstrap() {
   const container = document.getElementById('scene-container');
@@ -45,6 +46,9 @@ async function bootstrap() {
   const handManager = new HandInteractionManager(world, palaceManager);
   new HandStatusHUD(world, handManager);
 
+  // Initialize Spatial Object Creation Palette
+  new SpatialPalette(world, palaceManager);
+
   // Seed initial representative knowledge objects (within 0.3m - 0.8m seated comfort zone)
   palaceManager.addNode({
     id: 'topic-dsa',
@@ -79,7 +83,7 @@ async function bootstrap() {
     env.spatialDust.rotation.y += delta * 0.02;
   });
 
-  console.log('MindPalace VR initialized successfully with hand interaction system');
+  console.log('MindPalace VR initialized successfully with spatial creation palette');
 }
 
 bootstrap().catch((err) => {
