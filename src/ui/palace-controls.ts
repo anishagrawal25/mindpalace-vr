@@ -3,6 +3,7 @@ import type { PalaceSceneManager } from '../objects/palace-scene-manager';
 import type { ConnectionManager } from '../interaction/connection-manager';
 import type { PersistenceManager } from '../storage/persistence-manager';
 import { spatialAudio } from '../scene/spatial-audio';
+import { loadDemoPalace } from '../scene/demo-palace-seed';
 
 export class PalaceControls {
   private world: World;
@@ -114,6 +115,24 @@ export class PalaceControls {
     saveBtn.onclick = () => this.manualSave();
     controlBar.appendChild(saveBtn);
 
+    // Seed Demo Palace button
+    const demoBtn = document.createElement('button');
+    demoBtn.innerHTML = '&#9733; Load Demo Palace';
+    demoBtn.style.cssText = `
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(56, 189, 248, 0.25));
+      border: 1px solid rgba(168, 85, 247, 0.5);
+      color: #e9d5ff;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
+      transition: all 0.2s ease;
+    `;
+    demoBtn.onclick = () => this.seedDemo();
+    controlBar.appendChild(demoBtn);
+
     // Reset Space button
     const resetBtn = document.createElement('button');
     resetBtn.innerHTML = '&#9851; Reset Space';
@@ -157,6 +176,11 @@ export class PalaceControls {
     this.persistence.savePalace(nodes, connections);
     spatialAudio.playHover();
     this.showSaveConfirmation('Palace State Saved!');
+  }
+
+  public seedDemo() {
+    loadDemoPalace(this.palaceManager, this.connectionManager, this.persistence);
+    this.showSaveConfirmation('Loaded Rich Demo Palace (12 Nodes, 9 Connections)');
   }
 
   /**
