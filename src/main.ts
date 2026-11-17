@@ -7,6 +7,7 @@ import { HandStatusHUD } from './ui/hand-status-hud';
 import { SpatialPalette } from './ui/spatial-palette';
 import { ConnectionManager } from './interaction/connection-manager';
 import { PersistenceManager } from './storage/persistence-manager';
+import { PalaceControls } from './ui/palace-controls';
 
 async function bootstrap() {
   const container = document.getElementById('scene-container');
@@ -54,10 +55,21 @@ async function bootstrap() {
   // Initialize Spatial Object Creation Palette
   new SpatialPalette(world, palaceManager);
 
+  // Initialize Palace Controls (Save, Return-to-Center, Reset)
+  let palaceControls: PalaceControls;
+
   // Initialize Persistence with IndexedDB and localStorage fallback
   const persistence = new PersistenceManager((timestamp) => {
     console.log(`[Persistence] Palace state saved at ${new Date(timestamp).toLocaleTimeString()}`);
+    palaceControls?.showSaveConfirmation();
   });
+
+  palaceControls = new PalaceControls(
+    world,
+    palaceManager,
+    connectionManager,
+    persistence
+  );
 
   const triggerSave = () => {
     const nodes = palaceManager.getAllNodeData();
@@ -123,7 +135,7 @@ async function bootstrap() {
     env.spatialDust.rotation.y += delta * 0.02;
   });
 
-  console.log('MindPalace VR initialized successfully with persistence layer');
+  console.log('MindPalace VR initialized successfully with palace controls');
 }
 
 bootstrap().catch((err) => {
