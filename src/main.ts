@@ -6,6 +6,7 @@ import { HandInteractionManager } from './interaction/hand-interaction-manager';
 import { HandStatusHUD } from './ui/hand-status-hud';
 import { SpatialPalette } from './ui/spatial-palette';
 import { ConnectionManager } from './interaction/connection-manager';
+import { PersistenceManager } from './storage/persistence-manager';
 
 async function bootstrap() {
   const container = document.getElementById('scene-container');
@@ -47,51 +48,82 @@ async function bootstrap() {
   const handManager = new HandInteractionManager(world, palaceManager);
   new HandStatusHUD(world, handManager);
 
-  // Initialize Spatial Object Creation Palette
-  new SpatialPalette(world, palaceManager);
-
   // Initialize Connection Manager
   const connectionManager = new ConnectionManager(world, palaceManager);
 
-  // Seed initial representative knowledge objects (within 0.3m - 0.8m seated comfort zone)
-  palaceManager.addNode({
-    id: 'topic-dsa',
-    type: 'topic',
-    title: 'Data Structures & Algorithms',
-    position: [0, 1.25, -0.55],
-    color: '#a855f7',
-    createdAt: Date.now(),
+  // Initialize Spatial Object Creation Palette
+  new SpatialPalette(world, palaceManager);
+
+  // Initialize Persistence with IndexedDB and localStorage fallback
+  const persistence = new PersistenceManager((timestamp) => {
+    console.log(`[Persistence] Palace state saved at ${new Date(timestamp).toLocaleTimeString()}`);
   });
 
-  palaceManager.addNode({
-    id: 'idea-binary-search',
-    type: 'idea',
-    title: 'Binary Search O(log n)',
-    position: [-0.28, 1.15, -0.50],
-    color: '#06b6d4',
-    createdAt: Date.now(),
-  });
+  const triggerSave = () => {
+    const nodes = palaceManager.getAllNodeData();
+    const connections = connectionManager.getAllConnections();
+    persistence.savePalace(nodes, connections);
+  };
 
-  palaceManager.addNode({
-    id: 'note-complexity',
-    type: 'note',
-    title: 'Divide & Conquer',
-    content: 'Halve the search space at each iteration. Sorted invariant required.',
-    position: [0.28, 1.18, -0.48],
-    zoneId: 'DSA',
-    createdAt: Date.now(),
-  });
+  // Wire auto-save on node movements
+  handManager.onNodeReleased = (_node) => {
+    triggerSave();
+  };
 
-  // Connect initial knowledge objects with spatial luminous lines
-  connectionManager.createConnection('topic-dsa', 'idea-binary-search');
-  connectionManager.createConnection('idea-binary-search', 'note-complexity');
+  // Restore existing saved palace or seed default starter scene
+  const savedSnapshot = await persistence.loadPalace();
+
+  if (savedSnapshot && savedSnapshot.nodes.length > 0) {
+    console.log(`[Persistence] Restoring ${savedSnapshot.nodes.length} nodes from saved snapshot`);
+    savedSnapshot.nodes.forEach((nodeData) => {
+      palaceManager.addNode(nodeData);
+    });
+
+    savedSnapshot.connections.forEach((connData) => {
+      connectionManager.createConnection(connData.sourceId, connData.targetId, connData.label);
+    });
+  } else {
+    // Seed initial representative knowledge objects (within 0.3m - 0.8m seated comfort zone)
+    palaceManager.addNode({
+      id: 'topic-dsa',
+      type: 'topic',
+      title: 'Data Structures & Algorithms',
+      position: [0, 1.25, -0.55],
+      color: '#a855f7',
+      createdAt: Date.now(),
+    });
+
+    palaceManager.addNode({
+      id: 'idea-binary-search',
+      type: 'idea',
+      title: 'Binary Search O(log n)',
+      position: [-0.28, 1.15, -0.50],
+      color: '#06b6d4',
+      createdAt: Date.now(),
+    });
+
+    palaceManager.addNode({
+      id: 'note-complexity',
+      type: 'note',
+      title: 'Divide & Conquer',
+      content: 'Halve the search space at each iteration. Sorted invariant required.',
+      position: [0.28, 1.18, -0.48],
+      zoneId: 'DSA',
+      createdAt: Date.now(),
+    });
+
+    connectionManager.createConnection('topic-dsa', 'idea-binary-search');
+    connectionManager.createConnection('idea-binary-search', 'note-complexity');
+
+    triggerSave();
+  }
 
   // Subtle slow rotation of spatial dust
   world.onXRFrame((_frame, delta) => {
     env.spatialDust.rotation.y += delta * 0.02;
   });
 
-  console.log('MindPalace VR initialized successfully with spatial connections');
+  console.log('MindPalace VR initialized successfully with persistence layer');
 }
 
 bootstrap().catch((err) => {
