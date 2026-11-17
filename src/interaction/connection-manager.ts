@@ -2,11 +2,15 @@ import {
   World,
   Group,
   Line,
+  Mesh,
+  SphereGeometry,
+  MeshStandardMaterial,
   BufferGeometry,
   Float32BufferAttribute,
   LineBasicMaterial,
   Vector3,
   Color,
+  RayInteractable,
 } from '@iwsdk/core';
 import type { ConnectionData } from '../types/knowledge';
 import type { PalaceSceneManager } from '../objects/palace-scene-manager';
@@ -16,6 +20,7 @@ import { spatialAudio } from '../scene/spatial-audio';
 interface RenderedConnection {
   data: ConnectionData;
   line: Line;
+  midpointBead: Mesh;
   sourceNode: KnowledgeObjectContainer;
   targetNode: KnowledgeObjectContainer;
 }
@@ -33,8 +38,7 @@ export class ConnectionManager {
   private previewGeo: BufferGeometry | null = null;
   private previewPosArray: Float32Array = new Float32Array(6);
 
-  private vSource = new Vector3();
-  private vTarget = new Vector3();
+  private tempMidpoint = new Vector3();
 
   constructor(world: World, palaceManager: PalaceSceneManager) {
     this.world = world;
@@ -46,6 +50,7 @@ export class ConnectionManager {
 
     this.setupPreviewLine();
     this.initLiveUpdateLoop();
+    this.buildConnectionsHUD();
   }
 
   private setupPreviewLine() {
@@ -108,7 +113,7 @@ export class ConnectionManager {
   }
 
   /**
-   * Completes connection between two nodes.
+   * Completes connection between two nodes and adds an interactive midpoint disconnect bead.
    */
   public createConnection(
     sourceId: string,
@@ -125,6 +130,7 @@ export class ConnectionManager {
 
     if (!sourceNode || !targetNode) return null;
 
+    // Line mesh
     const posArray = new Float32Array(6);
     const geo = new BufferGeometry();
     geo.setAttribute('position', new Float32BufferAttribute(posArray, 3));
@@ -133,12 +139,33 @@ export class ConnectionManager {
       color: new Color(0xa855f7).lerp(new Color(0x06b6d4), 0.5),
       linewidth: 3,
       transparent: true,
-      opacity: 0.75,
+      opacity: 0.85,
     });
 
     const line = new Line(geo, mat);
     line.name = connectionId;
     this.connectionGroup.add(line);
+
+    // Interactive midpoint disconnect bead (Sphere radius 0.016m = 1.6cm)
+    const beadGeo = new SphereGeometry(0.016, 16, 16);
+    const beadMat = new MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.6,
+      roughness: 0.3,
+    });
+    const midpointBead = new Mesh(beadGeo, beadMat);
+    midpointBead.name = `bead_${connectionId}`;
+    this.connectionGroup.add(midpointBead);
+
+    // Register bead with IWSDK ECS for pinch/click disconnection
+    const beadEntity = this.world.createTransformEntity(midpointBead);
+    beadEntity.addComponent(RayInteractable);
+
+    // Add click/select listener to remove connection
+    midpointBead.addEventListener('click' as any, () => {
+      this.removeConnection(connectionId);
+    });
 
     const data: ConnectionData = {
       id: connectionId,
@@ -151,6 +178,7 @@ export class ConnectionManager {
     const rendered: RenderedConnection = {
       data,
       line,
+      midpointBead,
       sourceNode,
       targetNode,
     };
@@ -160,24 +188,47 @@ export class ConnectionManager {
 
     this.cancelConnectionPreview();
     spatialAudio.playConnect();
+    this.refreshConnectionsHUD();
 
     return data;
   }
 
   /**
-   * Removes an existing connection by ID.
+   * Removes an existing connection by ID with audio feedback and cleanup.
    */
   public removeConnection(connectionId: string): boolean {
     const conn = this.connections.get(connectionId);
     if (!conn) return false;
 
     this.connectionGroup.remove(conn.line);
+    this.connectionGroup.remove(conn.midpointBead);
+
     conn.line.geometry.dispose();
     if (conn.line.material instanceof LineBasicMaterial) {
       conn.line.material.dispose();
     }
+    conn.midpointBead.geometry.dispose();
+    if (conn.midpointBead.material instanceof MeshStandardMaterial) {
+      conn.midpointBead.material.dispose();
+    }
+
     this.connections.delete(connectionId);
+    spatialAudio.playRelease();
+    this.refreshConnectionsHUD();
     return true;
+  }
+
+  /**
+   * Cleans up any connections attached to a deleted node.
+   */
+  public removeConnectionsForNode(nodeId: string) {
+    const toRemove: string[] = [];
+    for (const [id, conn] of this.connections) {
+      if (conn.data.sourceId === nodeId || conn.data.targetId === nodeId) {
+        toRemove.push(id);
+      }
+    }
+    toRemove.forEach((id) => this.removeConnection(id));
   }
 
   public getAllConnections(): ConnectionData[] {
@@ -185,8 +236,8 @@ export class ConnectionManager {
   }
 
   /**
-   * Live update loop: ensures all spatial connection lines stay attached
-   * smoothly whenever either attached node is moved in 3D space!
+   * Live update loop: ensures all spatial connection lines & midpoint beads stay
+   * attached smoothly whenever either attached node is moved in 3D space!
    */
   private initLiveUpdateLoop() {
     this.world.onXRFrame(() => {
@@ -213,5 +264,92 @@ export class ConnectionManager {
     array[5] = dst.z;
 
     posAttr.needsUpdate = true;
+
+    // Update midpoint bead position
+    this.tempMidpoint.set(
+      (src.x + dst.x) * 0.5,
+      (src.y + dst.y) * 0.5,
+      (src.z + dst.z) * 0.5
+    );
+    conn.midpointBead.position.copy(this.tempMidpoint);
+  }
+
+  /**
+   * 2D Overlay list of active connections with instant disconnect buttons.
+   */
+  private buildConnectionsHUD() {
+    const overlay = document.getElementById('overlay-ui');
+    if (!overlay) return;
+
+    let hud = document.getElementById('connections-hud');
+    if (!hud) {
+      hud = document.createElement('div');
+      hud.id = 'connections-hud';
+      hud.className = 'interactive';
+      hud.style.cssText = `
+        position: absolute;
+        top: 180px;
+        right: 24px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-size: 11px;
+        color: #cbd5e1;
+        backdrop-filter: blur(10px);
+        max-width: 240px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      `;
+      overlay.appendChild(hud);
+    }
+    this.refreshConnectionsHUD();
+  }
+
+  public refreshConnectionsHUD() {
+    const hud = document.getElementById('connections-hud');
+    if (!hud) return;
+
+    const conns = this.getAllConnections();
+    if (conns.length === 0) {
+      hud.innerHTML = `
+        <div style="font-weight: 700; color: #94a3b8; text-transform: uppercase; font-size: 10px;">Connections (0)</div>
+        <div style="color: #64748b; font-size: 11px;">No active connections. Pinch two objects or use palette to connect.</div>
+      `;
+      return;
+    }
+
+    let itemsHtml = '';
+    conns.forEach((c) => {
+      const srcNode = this.palaceManager.getNode(c.sourceId);
+      const dstNode = this.palaceManager.getNode(c.targetId);
+      const srcTitle = srcNode ? srcNode.nodeData.title : c.sourceId;
+      const dstTitle = dstNode ? dstNode.nodeData.title : c.targetId;
+
+      itemsHtml += `
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.1); padding: 4px 0;">
+          <div style="font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px;">
+            <span style="color:#38bdf8;">${srcTitle}</span> &harr; <span style="color:#c084fc;">${dstTitle}</span>
+          </div>
+          <button data-conn-id="${c.id}" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; border-radius: 4px; padding: 2px 6px; font-size: 9px; cursor: pointer;">&times;</button>
+        </div>
+      `;
+    });
+
+    hud.innerHTML = `
+      <div style="font-weight: 700; color: #f1f5f9; text-transform: uppercase; font-size: 10px; display: flex; justify-content: space-between;">
+        <span>Connections (${conns.length})</span>
+        <span style="color: #94a3b8; font-weight: normal; font-size: 9px;">Pinch bead to cut</span>
+      </div>
+      <div>${itemsHtml}</div>
+    `;
+
+    hud.querySelectorAll('button[data-conn-id]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-conn-id');
+        if (id) this.removeConnection(id);
+      });
+    });
   }
 }
