@@ -8,6 +8,7 @@ import {
 } from '@iwsdk/core';
 import type { PalaceSceneManager } from '../objects/palace-scene-manager';
 import type { KnowledgeObjectContainer } from '../objects/knowledge-mesh-factory';
+import { spatialAudio } from '../scene/spatial-audio';
 
 export interface HandStatus {
   leftDetected: boolean;
@@ -41,7 +42,7 @@ export class HandInteractionManager {
   private listeners: Set<HandStatusListener> = new Set();
   private selectedNode: KnowledgeObjectContainer | null = null;
   private currentlyGrabbedNode: KnowledgeObjectContainer | null = null;
-  private previousGrabbedPositions: Map<string, Vector3> = new Map();
+  private lastHoveredNodeId: string | null = null;
 
   // Callbacks for connections and zone placement
   public onNodeGrabbed?: (node: KnowledgeObjectContainer) => void;
@@ -74,6 +75,7 @@ export class HandInteractionManager {
     this.selectedNode = node;
     if (node) {
       node.setVisualState('selected');
+      spatialAudio.playHover();
       this.onNodeSelected?.(node);
     }
   }
@@ -130,26 +132,37 @@ export class HandInteractionManager {
   private updateGrabAndHoverStates() {
     const nodes = this.palaceManager.getAllNodes();
     let activeGrab: KnowledgeObjectContainer | null = null;
+    let currentHoverId: string | null = null;
 
     for (const node of nodes) {
       const isGrabbed = node.visualState === 'grabbed';
+      const isHovered = node.visualState === 'hovered';
+
+      if (isHovered) {
+        currentHoverId = node.nodeData.id;
+      }
 
       if (isGrabbed) {
         activeGrab = node;
 
-        // Fire move event
+        // Enforce seated comfort radius & notify listeners of live movement
         this.clampToSeatedComfortRadius(node);
         this.onNodeMoved?.(node);
       }
     }
 
+    // Play hover audio once per hover enter
+    if (currentHoverId && currentHoverId !== this.lastHoveredNodeId && !activeGrab) {
+      spatialAudio.playHover();
+      this.lastHoveredNodeId = currentHoverId;
+    } else if (!currentHoverId) {
+      this.lastHoveredNodeId = null;
+    }
+
     // Detect grab start
     if (activeGrab && !this.currentlyGrabbedNode) {
       this.currentlyGrabbedNode = activeGrab;
-      this.previousGrabbedPositions.set(
-        activeGrab.nodeData.id,
-        activeGrab.position.clone()
-      );
+      spatialAudio.playGrab();
       this.onNodeGrabbed?.(activeGrab);
     }
 
@@ -165,6 +178,7 @@ export class HandInteractionManager {
         released.position.z,
       ];
 
+      spatialAudio.playRelease();
       this.onNodeReleased?.(released);
     }
   }
