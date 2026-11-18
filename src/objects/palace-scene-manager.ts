@@ -12,6 +12,7 @@ import {
   createKnowledgeObject,
   type KnowledgeObjectContainer,
 } from './knowledge-mesh-factory';
+import { registerFrameTick } from '../utils/frame-ticker';
 
 export class PalaceSceneManager {
   private world: World;
@@ -83,7 +84,7 @@ export class PalaceSceneManager {
    * and desktop emulation.
    */
   private initECSStateTracking() {
-    this.world.onXRFrame((_frame, delta) => {
+    registerFrameTick(this.world, (delta) => {
       const cameraPos = this.world.camera.position;
 
       for (const [_id, { container, entity }] of this.nodes) {

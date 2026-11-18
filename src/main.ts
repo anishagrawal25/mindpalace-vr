@@ -11,6 +11,8 @@ import { PalaceControls } from './ui/palace-controls';
 import { SubjectZonesManager } from './scene/subject-zones';
 import { PalaceAgentUI } from './ui/palace-agent-ui';
 import { OnboardingTutorial } from './ui/onboarding-tutorial';
+import { registerFrameTick } from './utils/frame-ticker';
+import { DesktopControls } from './interaction/desktop-controls';
 
 async function bootstrap() {
   const container = document.getElementById('scene-container');
@@ -38,6 +40,9 @@ async function bootstrap() {
       },
     },
   });
+
+  // Ensure camera initially looks forward toward the starter cluster
+  world.camera.lookAt(0, 1.2, -0.6);
 
   // Setup deep navy base with purple & cyan ambient/accent lighting
   const env = setupEnvironment(world);
@@ -82,6 +87,9 @@ async function bootstrap() {
     connectionManager,
     persistence
   );
+
+  // Initialize Desktop Mouse Orbit & Raycast Controls (Preview Mode)
+  new DesktopControls(world, palaceManager);
 
   const triggerSave = () => {
     const nodes = palaceManager.getAllNodeData();
@@ -156,7 +164,7 @@ async function bootstrap() {
   }
 
   // Subtle slow rotation of spatial dust
-  world.onXRFrame((_frame, delta) => {
+  registerFrameTick(world, (delta) => {
     env.spatialDust.rotation.y += delta * 0.02;
   });
 

@@ -123,7 +123,7 @@ export function createCardTexture(
   return texture;
 }
 
-function roundRect(
+export function roundRect(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,

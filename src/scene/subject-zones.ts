@@ -13,6 +13,7 @@ import {
 } from '@iwsdk/core';
 import type { SubjectZoneData } from '../types/knowledge';
 import type { KnowledgeObjectContainer } from '../objects/knowledge-mesh-factory';
+import { roundRect } from '../objects/text-texture-generator';
 
 export const PALACE_SUBJECT_ZONES: SubjectZoneData[] = [
   {
@@ -89,8 +90,7 @@ export class SubjectZonesManager {
       ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
       ctx.strokeStyle = zone.color;
       ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.roundRect(8, 8, 496, 112, 20);
+      roundRect(ctx, 8, 8, 496, 112, 20);
       ctx.fill();
       ctx.stroke();
 

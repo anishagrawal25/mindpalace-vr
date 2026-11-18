@@ -38,17 +38,17 @@ export function setupEnvironment(world: World): EnvironmentAssets {
   scene.background = new Color(0x060913);
   scene.fog = new FogExp2(0x060913, 0.12);
 
-  // 2. Ambient light (deep indigo tint)
-  const ambientLight = new AmbientLight(0x1e1b4b, 1.2);
+  // 2. Ambient light (balanced indigo-slate illumination)
+  const ambientLight = new AmbientLight(0x384260, 2.0);
   scene.add(ambientLight);
 
   // 3. Directional accent light: Cyan from top-left
-  const accentCyan = new DirectionalLight(0x06b6d4, 1.8);
+  const accentCyan = new DirectionalLight(0x38bdf8, 2.2);
   accentCyan.position.set(-1.5, 3, 1.5);
   scene.add(accentCyan);
 
   // 4. Point accent light: Purple from upper-right
-  const accentPurple = new PointLight(0xa855f7, 2.4, 8, 1.5);
+  const accentPurple = new PointLight(0xc084fc, 3.0, 10, 1.2);
   accentPurple.position.set(1.5, 2.2, -0.8);
   scene.add(accentPurple);
 

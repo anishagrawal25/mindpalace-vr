@@ -16,6 +16,7 @@ import type { ConnectionData } from '../types/knowledge';
 import type { PalaceSceneManager } from '../objects/palace-scene-manager';
 import type { KnowledgeObjectContainer } from '../objects/knowledge-mesh-factory';
 import { spatialAudio } from '../scene/spatial-audio';
+import { registerFrameTick } from '../utils/frame-ticker';
 
 interface RenderedConnection {
   data: ConnectionData;
@@ -240,7 +241,7 @@ export class ConnectionManager {
    * attached smoothly whenever either attached node is moved in 3D space!
    */
   private initLiveUpdateLoop() {
-    this.world.onXRFrame(() => {
+    registerFrameTick(this.world, () => {
       for (const conn of this.connections.values()) {
         this.updateSingleConnection(conn);
       }

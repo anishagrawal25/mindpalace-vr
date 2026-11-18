@@ -192,9 +192,12 @@ export class PalaceControls {
     this.world.camera.rotation.set(0, 0, 0);
 
     // If world player / XR origin is offset, return it to ground zero
-    if (this.world.player) {
-      this.world.player.position.set(0, 0, 0);
-      this.world.player.rotation.set(0, 0, 0);
+    const playerObj = (this.world as any).playerEntity?.object3D || (this.world.player as any);
+    if (playerObj?.position?.set) {
+      playerObj.position.set(0, 0, 0);
+    }
+    if (playerObj?.rotation?.set) {
+      playerObj.rotation.set(0, 0, 0);
     }
 
     spatialAudio.playHover();

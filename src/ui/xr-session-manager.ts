@@ -1,4 +1,5 @@
 import { World, SessionMode, launchXR } from '@iwsdk/core';
+import { registerFrameTick } from '../utils/frame-ticker';
 
 export class XRSessionManager {
   private world: World;
@@ -247,9 +248,9 @@ export class XRSessionManager {
   }
 
   private attachSessionListeners() {
-    // Poll session changes or listen to XR frame loop
+    // Poll session changes or listen to frame loop
     let lastSession = this.world.session;
-    this.world.onXRFrame(() => {
+    registerFrameTick(this.world, () => {
       if (this.world.session !== lastSession) {
         lastSession = this.world.session;
         this.updateStatusBadge();

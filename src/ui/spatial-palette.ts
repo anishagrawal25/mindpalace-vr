@@ -14,6 +14,7 @@ import {
 import type { PalaceSceneManager } from '../objects/palace-scene-manager';
 import type { KnowledgeType } from '../types/knowledge';
 import { spatialAudio } from '../scene/spatial-audio';
+import { roundRect } from '../objects/text-texture-generator';
 
 export class SpatialPalette {
   private world: World;
@@ -50,8 +51,7 @@ export class SpatialPalette {
     ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
     ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
     ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.roundRect(8, 8, 704, 224, 24);
+    roundRect(ctx, 8, 8, 704, 224, 24);
     ctx.fill();
     ctx.stroke();
 
@@ -65,8 +65,7 @@ export class SpatialPalette {
     ctx.fillStyle = 'rgba(6, 182, 212, 0.25)';
     ctx.strokeStyle = '#06b6d4';
     ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.roundRect(32, 76, 200, 128, 16);
+    roundRect(ctx, 32, 76, 200, 128, 16);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = '#f8fafc';
@@ -76,8 +75,7 @@ export class SpatialPalette {
     // Button 2: Note
     ctx.fillStyle = 'rgba(192, 132, 252, 0.25)';
     ctx.strokeStyle = '#c084fc';
-    ctx.beginPath();
-    ctx.roundRect(260, 76, 200, 128, 16);
+    roundRect(ctx, 260, 76, 200, 128, 16);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = '#f8fafc';
@@ -86,8 +84,7 @@ export class SpatialPalette {
     // Button 3: Topic
     ctx.fillStyle = 'rgba(168, 85, 247, 0.25)';
     ctx.strokeStyle = '#a855f7';
-    ctx.beginPath();
-    ctx.roundRect(488, 76, 200, 128, 16);
+    roundRect(ctx, 488, 76, 200, 128, 16);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = '#f8fafc';
